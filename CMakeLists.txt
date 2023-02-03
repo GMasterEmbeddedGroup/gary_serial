@@ -17,9 +17,49 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
+find_package(lifecycle_msgs REQUIRED)
+find_package(gary_common REQUIRED)
+find_package(diagnostic_msgs REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
+
+
+add_executable(dr16_receiver
+        src/dr16_receiver.cpp)
+
+target_include_directories(dr16_receiver PRIVATE include)
+
+ament_target_dependencies(
+        dr16_receiver
+        rclcpp
+        rclcpp_components
+        rclcpp_lifecycle
+        lifecycle_msgs
+        gary_common
+        diagnostic_msgs
+)
+
+add_library(dr16_receiver_lib SHARED
+        src/dr16_receiver.cpp)
+
+target_include_directories(dr16_receiver_lib PRIVATE include)
+
+ament_target_dependencies(
+        dr16_receiver_lib
+        rclcpp
+        rclcpp_components
+        rclcpp_lifecycle
+        lifecycle_msgs
+        gary_common
+        diagnostic_msgs
+)
+
+rclcpp_components_register_nodes(dr16_receiver_lib "gary_serial::DR16Receiver")
+
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -31,5 +71,23 @@ if(BUILD_TESTING)
   #set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
+
+install(TARGETS dr16_receiver
+        DESTINATION lib/${PROJECT_NAME}
+        )
+
+install(TARGETS dr16_receiver_lib
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib
+        RUNTIME DESTINATION bin)
+
+ament_export_dependencies(
+        rclcpp
+        rclcpp_components
+        rclcpp_lifecycle
+        lifecycle_msgs
+        gary_common
+        diagnostic_msgs
+)
 
 ament_package()

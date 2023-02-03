@@ -2,12 +2,21 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>gary_serial</name>
-  <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="245276732@qq.com">gmaster</maintainer>
-  <license>TODO: License declaration</license>
+  <version>0.0.1</version>
+  <description>gary_serial</description>
+  <maintainer email="i@myaki.moe">myaki</maintainer>
+  <maintainer email="williamyxn@gmail.com">Williamyxn</maintainer>
+  <maintainer email="juntong_2021@outlook.com">Juntong</maintainer>
+  <license>GPLv3</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>rclcpp_lifecycle</depend>
+  <depend>lifecycle_msgs</depend>
+  <depend>gary_common</depend>
+  <depend>diagnostic_msgs</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
