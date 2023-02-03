@@ -374,6 +374,23 @@ bool DR16Receiver::decode() {
     this->dr16_msg.mouse_press_r = r;
     this->dr16_msg.ch_wheel = static_cast<float>(wheel);
 
+    this->dr16_msg.key_w = (key & 0x01) != 0;
+    this->dr16_msg.key_s = (key & 0x02) != 0;
+    this->dr16_msg.key_a = (key & 0x04) != 0;
+    this->dr16_msg.key_d = (key & 0x08) != 0;
+    this->dr16_msg.key_shift = (key & 0x10) != 0;
+    this->dr16_msg.key_ctrl = (key & 0x20) != 0;
+    this->dr16_msg.key_q = (key & 0x40) != 0;
+    this->dr16_msg.key_e = (key & 0x80) != 0;
+    this->dr16_msg.key_r = ((key >> 8) & 0x01) != 0;
+    this->dr16_msg.key_f = ((key >> 8) & 0x02) != 0;
+    this->dr16_msg.key_g = ((key >> 8) & 0x04) != 0;
+    this->dr16_msg.key_z = ((key >> 8) & 0x08) != 0;
+    this->dr16_msg.key_x = ((key >> 8) & 0x10) != 0;
+    this->dr16_msg.key_c = ((key >> 8) & 0x20) != 0;
+    this->dr16_msg.key_v = ((key >> 8) & 0x40) != 0;
+    this->dr16_msg.key_b = ((key >> 8) & 0x80) != 0;
+
     RCLCPP_DEBUG(this->get_logger(), "decode succ");
     return true;
 }
