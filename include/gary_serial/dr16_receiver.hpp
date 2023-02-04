@@ -36,6 +36,8 @@ class DR16Receiver : public rclcpp_lifecycle::LifecycleNode {
 
         void publish_diag();
 
+        void detect_jammed();
+
         //params
         std::string send_topic;
         std::string diagnostic_topic;
@@ -52,6 +54,7 @@ class DR16Receiver : public rclcpp_lifecycle::LifecycleNode {
         //timer
         rclcpp::TimerBase::SharedPtr timer_update;
         rclcpp::TimerBase::SharedPtr timer_diag;
+        rclcpp::TimerBase::SharedPtr timer_detect;
 
         //message
         gary_common::msg::DR16Receiver dr16_msg;
@@ -60,6 +63,8 @@ class DR16Receiver : public rclcpp_lifecycle::LifecycleNode {
         int fd;
         bool is_opened;
         int available_len;
+        int decode_fail_cnt;
+        bool flag_transmission_jammed;
         uint8_t buff[18]{};
         rclcpp::Time last_update_timestamp;
     };

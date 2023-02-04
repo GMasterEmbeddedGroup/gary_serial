@@ -13,7 +13,6 @@ using namespace std::chrono_literals;
 using namespace gary_serial;
 
 
-
 DR16Receiver::DR16Receiver(const rclcpp::NodeOptions &options) : rclcpp_lifecycle::LifecycleNode(
         "dr16_receiver", options) {
 
@@ -31,6 +30,8 @@ DR16Receiver::DR16Receiver(const rclcpp::NodeOptions &options) : rclcpp_lifecycl
     this->fd = 0;
     this->is_opened = false;
     this->available_len = 0;
+    this->decode_fail_cnt = 0;
+    this->flag_transmission_jammed = false;
 
 }
 
@@ -94,7 +95,7 @@ CallbackReturn DR16Receiver::on_configure(const rclcpp_lifecycle::State &previou
     this->diag_msg.header.frame_id = "";
 
     diagnostic_msgs::msg::DiagnosticStatus diagnostic_status;
-    if(this->override_diag_device_name.empty()) {
+    if (this->override_diag_device_name.empty()) {
         //default device name, without /dev/ prefix
         diagnostic_status.hardware_id = this->serial_port.substr(5);
         diagnostic_status.name = this->serial_port.substr(5);
@@ -116,6 +117,7 @@ CallbackReturn DR16Receiver::on_cleanup(const rclcpp_lifecycle::State &previous_
     //delete publisher
     this->msg_publisher.reset();
     this->diag_publisher.reset();
+    this->timer_detect.reset();
 
     //clear diag msg
     this->diag_msg.status.clear();
@@ -131,6 +133,7 @@ CallbackReturn DR16Receiver::on_activate(const rclcpp_lifecycle::State &previous
     //create timer
     this->timer_update = this->create_wall_timer(1000ms / this->update_freq, [this] { update(); });
     this->timer_diag = this->create_wall_timer(1000ms / this->diag_freq, [this] { publish_diag(); });
+    this->timer_detect = this->create_wall_timer(1000ms, [this] { detect_jammed(); });
     //activate publisher
     this->msg_publisher->on_activate();
     this->diag_publisher->on_activate();
@@ -150,6 +153,7 @@ CallbackReturn DR16Receiver::on_deactivate(const rclcpp_lifecycle::State &previo
     //delete timer
     this->timer_update.reset();
     this->timer_diag.reset();
+    this->timer_detect.reset();
     //deactivate publisher
     this->msg_publisher->on_deactivate();
     this->diag_publisher->on_deactivate();
@@ -168,6 +172,7 @@ CallbackReturn DR16Receiver::on_shutdown(const rclcpp_lifecycle::State &previous
     if (this->diag_publisher.get() != nullptr) this->diag_publisher.reset();
     if (this->timer_update.get() != nullptr) this->timer_update.reset();
     if (this->timer_diag.get() != nullptr) this->timer_diag.reset();
+    if (this->timer_detect.get() != nullptr) this->timer_detect.reset();
     this->close();
 
     RCLCPP_INFO(this->get_logger(), "shutdown");
@@ -181,6 +186,7 @@ CallbackReturn DR16Receiver::on_error(const rclcpp_lifecycle::State &previous_st
     if (this->diag_publisher.get() != nullptr) this->diag_publisher.reset();
     if (this->timer_update.get() != nullptr) this->timer_update.reset();
     if (this->timer_diag.get() != nullptr) this->timer_diag.reset();
+    if (this->timer_detect.get() != nullptr) this->timer_detect.reset();
     this->close();
 
     RCLCPP_INFO(this->get_logger(), "error");
@@ -196,9 +202,9 @@ bool DR16Receiver::open() {
     if (this->fd == -1) return false;
 
     //get param
-    struct termios2 options {};
+    struct termios2 options{};
     ret = ioctl(fd, TCGETS2, &options);
-    if(ret < 0) return false;
+    if (ret < 0) return false;
 
     //custom baudrate
     options.c_cflag &= ~CBAUD;
@@ -226,7 +232,7 @@ bool DR16Receiver::open() {
 
     //set param
     ret = ioctl(fd, TCSETS2, &options);
-    if(ret < 0) return false;
+    if (ret < 0) return false;
 
     is_opened = true;
     return true;
@@ -269,7 +275,7 @@ bool DR16Receiver::read() {
 
     //check serial open
     if (!is_opened) {
-        if(!this->open()) {
+        if (!this->open()) {
             RCLCPP_DEBUG(this->get_logger(), "failed to reopen serial port");
             return false;
         }
@@ -337,27 +343,28 @@ bool DR16Receiver::decode() {
     ch1 -= 1024;
     ch2 = (((int16_t) this->buff[2] >> 6) | ((int16_t) this->buff[3] << 2) | ((int16_t) this->buff[4] << 10)) & 0x07FF;
     ch2 -= 1024;
-    ch3 = (((int16_t) this->buff[4] >> 1) | ((int16_t) this->buff[5]<<7)) & 0x07FF;
+    ch3 = (((int16_t) this->buff[4] >> 1) | ((int16_t) this->buff[5] << 7)) & 0x07FF;
     ch3 -= 1024;
     //switch
     s1 = ((this->buff[5] >> 4) & 0x000C) >> 2;
     s2 = ((this->buff[5] >> 4) & 0x0003);
     //mouse
-    x = ((int16_t)this->buff[6]) | ((int16_t)this->buff[7] << 8);
-    y = ((int16_t)this->buff[8]) | ((int16_t)this->buff[9] << 8);
-    z = ((int16_t)this->buff[10]) | ((int16_t)this->buff[11] << 8);
+    x = ((int16_t) this->buff[6]) | ((int16_t) this->buff[7] << 8);
+    y = ((int16_t) this->buff[8]) | ((int16_t) this->buff[9] << 8);
+    z = ((int16_t) this->buff[10]) | ((int16_t) this->buff[11] << 8);
     l = this->buff[12];
     r = this->buff[13];
     //keyboard
     key = this->buff[14] | this->buff[15] << 8;
     //wheel
-    wheel = ((int16_t)this->buff[16]) | ((int16_t)this->buff[17] << 8);
+    wheel = ((int16_t) this->buff[16]) | ((int16_t) this->buff[17] << 8);
     wheel -= 1024;
 
     //validate range
     if (abs(ch0) > 660 || abs(ch1) > 660 || abs(ch2) > 660 || abs(ch3) > 660 || s1 < 1 || s1 > 3 || s2 < 1 ||
         s2 > 3 || l > 1 || l < 0 || r > 1 || r < 0 || abs(wheel) > 660) {
         RCLCPP_DEBUG(this->get_logger(), "failed to decode");
+        this->decode_fail_cnt++;
         return false;
     }
 
@@ -406,7 +413,7 @@ void DR16Receiver::update() {
     RCLCPP_DEBUG(this->get_logger(), "update");
 
 
-    if (!this->read())  {
+    if (!this->read()) {
         RCLCPP_DEBUG(this->get_logger(), "read() failed");
         return;
     }
@@ -425,16 +432,47 @@ void DR16Receiver::update() {
 void DR16Receiver::publish_diag() {
     this->diag_msg.header.stamp = this->get_clock()->now();
     if (!this->is_opened) {
+
         this->diag_msg.status[0].level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
         this->diag_msg.status[0].message = "serial device offline";
-    } else if(this->get_clock()->now() - this->last_update_timestamp > 100ms){
+
+        rclcpp::Clock clock;
+        RCLCPP_ERROR_THROTTLE(this->get_logger(), clock, 1000, "[%s] serial device offline",
+                              this->diag_msg.status[0].name.c_str());
+
+    } else if (this->get_clock()->now() - this->last_update_timestamp > 500ms) {
+
         this->diag_msg.status[0].level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
         this->diag_msg.status[0].message = "receiver offline";
+
+        rclcpp::Clock clock;
+        RCLCPP_ERROR_THROTTLE(this->get_logger(), clock, 1000, "[%s] receiver offline",
+                              this->diag_msg.status[0].name.c_str());
+
+    } else if (this->flag_transmission_jammed) {
+
+        this->diag_msg.status[0].level = diagnostic_msgs::msg::DiagnosticStatus::WARN;
+        this->diag_msg.status[0].message = "transmission jammed";
+
+        rclcpp::Clock clock;
+        RCLCPP_WARN_THROTTLE(this->get_logger(), clock, 1000, "[%s] transmission jammed",
+                             this->diag_msg.status[0].name.c_str());
+
     } else {
         this->diag_msg.status[0].level = diagnostic_msgs::msg::DiagnosticStatus::OK;
         this->diag_msg.status[0].message = "ok";
     }
     this->diag_publisher->publish(this->diag_msg);
+}
+
+void DR16Receiver::detect_jammed() {
+    //10 packet decode failed can be considered as transmission jammed
+    if (this->decode_fail_cnt > 10) {
+        this->flag_transmission_jammed = true;
+    } else {
+        this->flag_transmission_jammed = false;
+    }
+    this->decode_fail_cnt = 0;
 }
 
 int main(int argc, char const *const argv[]) {
