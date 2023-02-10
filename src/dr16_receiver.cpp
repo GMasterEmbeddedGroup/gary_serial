@@ -44,7 +44,7 @@ CallbackReturn DR16Receiver::on_configure(const rclcpp_lifecycle::State &previou
         return CallbackReturn::FAILURE;
     }
     this->send_topic = this->get_parameter("send_topic").as_string();
-    this->msg_publisher = this->create_publisher<gary_common::msg::DR16Receiver>(
+    this->msg_publisher = this->create_publisher<gary_msgs::msg::DR16Receiver>(
             this->send_topic, rclcpp::SystemDefaultsQoS());
 
     //check and create diagnostic publisher

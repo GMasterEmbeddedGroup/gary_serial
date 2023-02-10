@@ -21,7 +21,7 @@ find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(lifecycle_msgs REQUIRED)
-find_package(gary_common REQUIRED)
+find_package(gary_msgs REQUIRED)
 find_package(diagnostic_msgs REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
@@ -39,7 +39,7 @@ ament_target_dependencies(
         rclcpp_components
         rclcpp_lifecycle
         lifecycle_msgs
-        gary_common
+        gary_msgs
         diagnostic_msgs
 )
 
@@ -54,7 +54,7 @@ ament_target_dependencies(
         rclcpp_components
         rclcpp_lifecycle
         lifecycle_msgs
-        gary_common
+        gary_msgs
         diagnostic_msgs
 )
 
@@ -86,7 +86,7 @@ ament_export_dependencies(
         rclcpp_components
         rclcpp_lifecycle
         lifecycle_msgs
-        gary_common
+        gary_msgs
         diagnostic_msgs
 )
 

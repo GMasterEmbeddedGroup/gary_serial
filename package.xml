@@ -15,7 +15,7 @@
   <depend>rclcpp_components</depend>
   <depend>rclcpp_lifecycle</depend>
   <depend>lifecycle_msgs</depend>
-  <depend>gary_common</depend>
+  <depend>gary_msgs</depend>
   <depend>diagnostic_msgs</depend>
 
   <test_depend>ament_lint_auto</test_depend>

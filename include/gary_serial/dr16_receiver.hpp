@@ -1,7 +1,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include "rcl_interfaces/msg/set_parameters_result.hpp"
-#include "gary_common/msg/dr16_receiver.hpp"
+#include "gary_msgs/msg/dr16_receiver.hpp"
 #include "diagnostic_msgs/msg/diagnostic_array.hpp"
 #include <vector>
 #include <chrono>
@@ -48,7 +48,7 @@ class DR16Receiver : public rclcpp_lifecycle::LifecycleNode {
         std::string override_diag_device_name;
 
         //publisher
-        rclcpp_lifecycle::LifecyclePublisher<gary_common::msg::DR16Receiver>::SharedPtr msg_publisher;
+        rclcpp_lifecycle::LifecyclePublisher<gary_msgs::msg::DR16Receiver>::SharedPtr msg_publisher;
         rclcpp_lifecycle::LifecyclePublisher<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr diag_publisher;
 
         //timer
@@ -57,7 +57,7 @@ class DR16Receiver : public rclcpp_lifecycle::LifecycleNode {
         rclcpp::TimerBase::SharedPtr timer_detect;
 
         //message
-        gary_common::msg::DR16Receiver dr16_msg;
+        gary_msgs::msg::DR16Receiver dr16_msg;
         diagnostic_msgs::msg::DiagnosticArray diag_msg;
 
         int fd;
