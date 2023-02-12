@@ -368,10 +368,10 @@ bool DR16Receiver::decode() {
         return false;
     }
 
-    this->dr16_msg.ch_right_x = static_cast<float>(ch0);
-    this->dr16_msg.ch_right_y = static_cast<float>(ch1);
-    this->dr16_msg.ch_left_x = static_cast<float>(ch2);
-    this->dr16_msg.ch_left_y = static_cast<float>(ch3);
+    this->dr16_msg.ch_right_x = static_cast<float>(ch0) / 660;
+    this->dr16_msg.ch_right_y = static_cast<float>(ch1) / 660;
+    this->dr16_msg.ch_left_x = static_cast<float>(ch2) / 660;
+    this->dr16_msg.ch_left_y = static_cast<float>(ch3) / 660;
     this->dr16_msg.sw_left = s1;
     this->dr16_msg.sw_right = s2;
     this->dr16_msg.mouse_x = static_cast<float>(x);
@@ -379,7 +379,7 @@ bool DR16Receiver::decode() {
     this->dr16_msg.mouse_z = static_cast<float>(z);
     this->dr16_msg.mouse_press_l = l;
     this->dr16_msg.mouse_press_r = r;
-    this->dr16_msg.ch_wheel = static_cast<float>(wheel);
+    this->dr16_msg.ch_wheel = static_cast<float>(wheel) / 660;
 
     this->dr16_msg.key_w = (key & 0x01) != 0;
     this->dr16_msg.key_s = (key & 0x02) != 0;
