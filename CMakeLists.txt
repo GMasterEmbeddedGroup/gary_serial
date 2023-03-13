@@ -31,10 +31,27 @@ find_package(diagnostic_msgs REQUIRED)
 add_executable(dr16_receiver
         src/dr16_receiver.cpp)
 
+add_executable(rm_referee_system
+        src/utils/crc8_crc16.cpp
+        src/utils/rm_referee.cpp
+        src/rm_referee_system.cpp)
+
+target_link_libraries(rm_referee_system serial)
+
 target_include_directories(dr16_receiver PRIVATE include)
+target_include_directories(rm_referee_system PRIVATE include)
 
 ament_target_dependencies(
         dr16_receiver
+        rclcpp
+        rclcpp_components
+        rclcpp_lifecycle
+        lifecycle_msgs
+        gary_msgs
+        diagnostic_msgs
+)
+ament_target_dependencies(
+        rm_referee_system
         rclcpp
         rclcpp_components
         rclcpp_lifecycle
@@ -46,7 +63,13 @@ ament_target_dependencies(
 add_library(dr16_receiver_lib SHARED
         src/dr16_receiver.cpp)
 
+add_library(rm_referee_system_lib SHARED
+        src/utils/crc8_crc16.cpp
+        src/utils/rm_referee.cpp
+        src/rm_referee_system.cpp)
+
 target_include_directories(dr16_receiver_lib PRIVATE include)
+target_include_directories(rm_referee_system_lib PRIVATE include)
 
 ament_target_dependencies(
         dr16_receiver_lib
@@ -57,9 +80,18 @@ ament_target_dependencies(
         gary_msgs
         diagnostic_msgs
 )
+ament_target_dependencies(
+        rm_referee_system_lib
+        rclcpp
+        rclcpp_components
+        rclcpp_lifecycle
+        lifecycle_msgs
+        gary_msgs
+        diagnostic_msgs
+)
 
 rclcpp_components_register_nodes(dr16_receiver_lib "gary_serial::DR16Receiver")
-
+rclcpp_components_register_nodes(rm_referee_system_lib "gary_serial::RMRefereeSystem")
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -75,8 +107,15 @@ endif()
 install(TARGETS dr16_receiver
         DESTINATION lib/${PROJECT_NAME}
         )
+install(TARGETS rm_referee_system
+        DESTINATION lib/${PROJECT_NAME}
+        )
 
 install(TARGETS dr16_receiver_lib
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib
+        RUNTIME DESTINATION bin)
+install(TARGETS rm_referee_system_lib
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib
         RUNTIME DESTINATION bin)
