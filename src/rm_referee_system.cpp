@@ -72,8 +72,8 @@ CallbackReturn RMRefereeSystem::on_configure(const rclcpp_lifecycle::State &prev
             "RefereeICRABuffDebuffZoneAndLurkStatusMSG", rclcpp::SystemDefaultsQoS());
     this->ImageTransmitterPublisher = this->create_publisher<gary_msgs::msg::ImageTransmitter>(
             "RefereeImageTransmitterMSG", rclcpp::SystemDefaultsQoS());
-    this->InteractiveDataPublisher = this->create_publisher<gary_msgs::msg::InteractiveData>(
-            "RefereeInteractiveDataMSG", rclcpp::SystemDefaultsQoS());
+    this->InteractiveDataRecvPublisher = this->create_publisher<gary_msgs::msg::InteractiveDataRecv>(
+            "RefereeInteractiveDataRecvMSG", rclcpp::SystemDefaultsQoS());
     this->PowerHeatPublisher = this->create_publisher<gary_msgs::msg::PowerHeat>(
             "RefereePowerHeatMSG", rclcpp::SystemDefaultsQoS());
     this->RefereeWarningPublisher = this->create_publisher<gary_msgs::msg::RefereeWarning>(
@@ -98,7 +98,7 @@ CallbackReturn RMRefereeSystem::on_configure(const rclcpp_lifecycle::State &prev
             "RefereeSupplyProjectileRequestMSG", rclcpp::SystemDefaultsQoS());
 
     //subscriber
-    this->WhateverSubscription = this->create_subscription<gary_msgs::msg::Whatever>("/RefereeWhatever",10,
+    this->InteractiveDataSendSubscription = this->create_subscription<gary_msgs::msg::InteractiveDataSend>("/RefereeInteractiveDataSend",10,
                                                                                      std::bind(&RMRefereeSystem::topic_callback,
                                                                                                this,std::placeholders::_1));
 
@@ -190,7 +190,7 @@ CallbackReturn RMRefereeSystem::on_cleanup(const rclcpp_lifecycle::State &previo
     this->GameStatusPublisher.reset();
     this->ICRABuffDebuffZoneAndLurkStatusPublisher.reset();
     this->ImageTransmitterPublisher.reset();
-    this->InteractiveDataPublisher.reset();
+    this->InteractiveDataRecvPublisher.reset();
     this->PowerHeatPublisher.reset();
     this->RefereeWarningPublisher.reset();
     this->RFIDStatusPublisher.reset();
@@ -234,7 +234,7 @@ CallbackReturn RMRefereeSystem::on_activate(const rclcpp_lifecycle::State &previ
     this->GameStatusPublisher->on_activate();
     this->ICRABuffDebuffZoneAndLurkStatusPublisher->on_activate();
     this->ImageTransmitterPublisher->on_activate();
-    this->InteractiveDataPublisher->on_activate();
+    this->InteractiveDataRecvPublisher->on_activate();
     this->PowerHeatPublisher->on_activate();
     this->RefereeWarningPublisher->on_activate();
     this->RFIDStatusPublisher->on_activate();
@@ -279,7 +279,7 @@ CallbackReturn RMRefereeSystem::on_deactivate(const rclcpp_lifecycle::State &pre
     this->GameStatusPublisher->on_deactivate();
     this->ICRABuffDebuffZoneAndLurkStatusPublisher->on_deactivate();
     this->ImageTransmitterPublisher->on_deactivate();
-    this->InteractiveDataPublisher->on_deactivate();
+    this->InteractiveDataRecvPublisher->on_deactivate();
     this->PowerHeatPublisher->on_deactivate();
     this->RefereeWarningPublisher->on_deactivate();
     this->RFIDStatusPublisher->on_deactivate();
@@ -320,7 +320,7 @@ CallbackReturn RMRefereeSystem::on_shutdown(const rclcpp_lifecycle::State &previ
     if (this->ICRABuffDebuffZoneAndLurkStatusPublisher.get() != nullptr)
         this->ICRABuffDebuffZoneAndLurkStatusPublisher.reset();
     if (this->ImageTransmitterPublisher.get() != nullptr) this->ImageTransmitterPublisher.reset();
-    if (this->InteractiveDataPublisher.get() != nullptr) this->InteractiveDataPublisher.reset();
+    if (this->InteractiveDataRecvPublisher.get() != nullptr) this->InteractiveDataRecvPublisher.reset();
     if (this->PowerHeatPublisher.get() != nullptr) this->PowerHeatPublisher.reset();
     if (this->RefereeWarningPublisher.get() != nullptr) this->RefereeWarningPublisher.reset();
     if (this->RFIDStatusPublisher.get() != nullptr) this->RFIDStatusPublisher.reset();
@@ -361,7 +361,7 @@ CallbackReturn RMRefereeSystem::on_error(const rclcpp_lifecycle::State &previous
     if (this->ICRABuffDebuffZoneAndLurkStatusPublisher.get() != nullptr)
         this->ICRABuffDebuffZoneAndLurkStatusPublisher.reset();
     if (this->ImageTransmitterPublisher.get() != nullptr) this->ImageTransmitterPublisher.reset();
-    if (this->InteractiveDataPublisher.get() != nullptr) this->InteractiveDataPublisher.reset();
+    if (this->InteractiveDataRecvPublisher.get() != nullptr) this->InteractiveDataRecvPublisher.reset();
     if (this->PowerHeatPublisher.get() != nullptr) this->PowerHeatPublisher.reset();
     if (this->RefereeWarningPublisher.get() != nullptr) this->RefereeWarningPublisher.reset();
     if (this->RFIDStatusPublisher.get() != nullptr) this->RFIDStatusPublisher.reset();
@@ -744,18 +744,18 @@ bool RMRefereeSystem::read() {
                     break;
                 }
                 case ROBOT_INTERACTIVE_DATA_CMD_ID: {
-                    this->InteractiveDataMsg.header.stamp = this->get_clock()->now();
-                    InteractiveDataMsg.data_length = this->rmReferee->getCustomeDataLen();
-                    std::vector<uint8_t> v(this->rmReferee->get_robotInteractiveData().data,
-                                           this->rmReferee->get_robotInteractiveData().data +
-                                           InteractiveDataMsg.data_length);
-                    InteractiveDataMsg.data = v;
-                    InteractiveDataMsg.data_cmd_id = this->rmReferee->get_studentInteractiveHeaderData().data_cmd_id;
-                    InteractiveDataMsg.receiver_id = this->rmReferee->get_studentInteractiveHeaderData().receiver_ID;
-                    InteractiveDataMsg.sender_id = this->rmReferee->get_studentInteractiveHeaderData().sender_ID;
-//                auto msg = std::make_pair(InteractiveDataPriority, std::make_pair(cmd_id.cmdid_t, InteractiveDataMsg));
+                    this->InteractiveDataRecvMsg.header.stamp = this->get_clock()->now();
+                    InteractiveDataRecvMsg.data_length = this->rmReferee->getCustomeDataLen();
+                    std::vector<uint8_t> v(this->rmReferee->get_robotInteractiveDataRecv().data,
+                                           this->rmReferee->get_robotInteractiveDataRecv().data +
+                                           InteractiveDataRecvMsg.data_length);
+                    InteractiveDataRecvMsg.data = v;
+                    InteractiveDataRecvMsg.data_cmd_id = this->rmReferee->get_studentInteractiveHeaderData().data_cmd_id;
+                    InteractiveDataRecvMsg.receiver_id = this->rmReferee->get_studentInteractiveHeaderData().receiver_ID;
+                    InteractiveDataRecvMsg.sender_id = this->rmReferee->get_studentInteractiveHeaderData().sender_ID;
+//                auto msg = std::make_pair(InteractiveDataRecvPriority, std::make_pair(cmd_id.cmdid_t, InteractiveDataRecvMsg));
 //                topicQueue.emplace(msg);
-                    InteractiveDataPublisher->publish(InteractiveDataMsg);
+                    InteractiveDataRecvPublisher->publish(InteractiveDataRecvMsg);
                     break;
                 }
                 case POWER_HEAT_DATA_CMD_ID: {
@@ -916,7 +916,7 @@ void RMRefereeSystem::publish_data() {
     auto Obj = topicQueue.top();
     auto msg = Obj.second;
     if(Obj.first == 0) {
-        std::vector<uint8_t> v = this->rmReferee->packWhateverInteractiveData(
+        std::vector<uint8_t> v = this->rmReferee->packInteractiveDataSendInteractiveDataRecv(
                 msg.data_cmd_id,msg.sender_id,msg.receiver_id,msg.data_length,msg.data);
         if(is_opened){
             auto *buffer = new uint8_t [v.size()*sizeof(uint8_t)];
@@ -945,7 +945,7 @@ void RMRefereeSystem::publish_data() {
             RCLCPP_DEBUG(this->get_logger(),"Popped at %f",this_time_sec);
             RCLCPP_DEBUG(this->get_logger(),"Valid:%f",msg.valid_time);
         }else{
-            std::vector<uint8_t> v = this->rmReferee->packWhateverInteractiveData(
+            std::vector<uint8_t> v = this->rmReferee->packInteractiveDataSendInteractiveDataRecv(
                     msg.data_cmd_id,msg.sender_id,msg.receiver_id,msg.data_length,msg.data);
             if(is_opened){
                 auto *buffer = new uint8_t [v.size()*sizeof(uint8_t)];
@@ -1028,7 +1028,7 @@ __attribute__((unused)) void RMRefereeSystem::readBuff(uint8_t *buff, uint16_t l
 
 }
 
-void RMRefereeSystem::topic_callback(const gary_msgs::msg::Whatever::SharedPtr msg) {
+void RMRefereeSystem::topic_callback(const gary_msgs::msg::InteractiveDataSend::SharedPtr msg) {
         topicQueue.emplace(std::make_pair(msg->priority,*msg));
 }
 

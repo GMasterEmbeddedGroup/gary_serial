@@ -35,7 +35,7 @@ namespace utils {
     RMReferee::RMReferee() {
         setZero(this->keyboardCommand);
         setZero(this->robotCommand);
-        setZero(this->robotInteractiveData);
+        setZero(this->robotInteractiveDataRecv);
         setZero(this->studentInteractiveHeaderData);
         setZero(this->dartClientCmd);
         setZero(this->rfidStatus);
@@ -118,7 +118,7 @@ namespace utils {
             case ROBOT_INTERACTIVE_DATA_CMD_ID:{
                 std::memcpy(&studentInteractiveHeaderData, frame + index,
                             sizeof(studentInteractiveHeaderData));
-                std::memcpy(&robotInteractiveData,
+                std::memcpy(&robotInteractiveDataRecv,
                             frame + index + sizeof(studentInteractiveHeaderData),
                             referee_receive_header._struct.data_length - 6);
                 custom_data_len = referee_receive_header._struct.data_length - 6;
@@ -162,7 +162,7 @@ namespace utils {
         return custom_data_len;
     }
 
-     std::vector<uint8_t> RMReferee::packWhateverInteractiveData(uint16_t data_cmd_id,
+     std::vector<uint8_t> RMReferee::packInteractiveDataSendInteractiveDataRecv(uint16_t data_cmd_id,
                                                                 uint16_t sender_id, uint16_t receiver_id,
                                                                 uint8_t data_length, std::vector<uint8_t>& data){
 

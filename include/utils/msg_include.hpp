@@ -14,7 +14,7 @@
 #include "gary_msgs/msg/game_status.hpp"
 #include "gary_msgs/msg/icra_buff_debuff_zone_and_lurk_status.hpp"
 #include "gary_msgs/msg/image_transmitter.hpp"
-#include "gary_msgs/msg/interactive_data.hpp"
+#include "gary_msgs/msg/interactive_data_recv.hpp"
 //#include "gary_msgs/msg/pid.hpp"
 #include "gary_msgs/msg/power_heat.hpp"
 #include "gary_msgs/msg/referee_warning.hpp"
@@ -27,6 +27,6 @@
 #include "gary_msgs/msg/shoot_data.hpp"
 #include "gary_msgs/msg/supply_projectile_action.hpp"
 #include "gary_msgs/msg/supply_projectile_request.hpp"
-#include "gary_msgs/msg/whatever.hpp"
+#include "gary_msgs/msg/interactive_data_send.hpp"
 
 #endif //BUILD_MSG_INCLUDE_HPP

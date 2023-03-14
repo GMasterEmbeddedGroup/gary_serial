@@ -18,7 +18,7 @@
 #include <libserial/SerialPortConstants.h>
 
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
-using topicObject = std::pair<uint16_t,gary_msgs::msg::Whatever>;
+using topicObject = std::pair<uint16_t,gary_msgs::msg::InteractiveDataSend>;
 struct cmp
 {
     bool operator() (topicObject& objectL, topicObject& objectR)
@@ -46,7 +46,7 @@ namespace gary_serial {
     uint16_t GameStatusPriority = 0;
     uint16_t ICRABuffDebuffZoneAndLurkStatusPriority = 0;
     uint16_t ImageTransmitterPriority = 0;
-    uint16_t InteractiveDataPriority = 0;
+    uint16_t InteractiveDataRecvPriority = 0;
     uint16_t PowerHeatPriority = 0;
     uint16_t RefereeWarningPriority = 0;
     uint16_t RFIDStatusPriority = 0;
@@ -133,8 +133,8 @@ namespace gary_serial {
         rclcpp_lifecycle::LifecyclePublisher<gary_msgs::msg::ICRABuffDebuffZoneAndLurkStatus>::SharedPtr ICRABuffDebuffZoneAndLurkStatusPublisher;
         gary_msgs::msg::ImageTransmitter ImageTransmitterMsg;
         rclcpp_lifecycle::LifecyclePublisher<gary_msgs::msg::ImageTransmitter>::SharedPtr ImageTransmitterPublisher;
-        gary_msgs::msg::InteractiveData InteractiveDataMsg;
-        rclcpp_lifecycle::LifecyclePublisher<gary_msgs::msg::InteractiveData>::SharedPtr InteractiveDataPublisher;
+        gary_msgs::msg::InteractiveDataRecv InteractiveDataRecvMsg;
+        rclcpp_lifecycle::LifecyclePublisher<gary_msgs::msg::InteractiveDataRecv>::SharedPtr InteractiveDataRecvPublisher;
         gary_msgs::msg::PowerHeat PowerHeatMsg;
         rclcpp_lifecycle::LifecyclePublisher<gary_msgs::msg::PowerHeat>::SharedPtr PowerHeatPublisher;
         gary_msgs::msg::RefereeWarning RefereeWarningMsg;
@@ -158,8 +158,8 @@ namespace gary_serial {
         gary_msgs::msg::SupplyProjectileRequest SupplyProjectileRequestMsg;
         rclcpp_lifecycle::LifecyclePublisher<gary_msgs::msg::SupplyProjectileRequest>::SharedPtr SupplyProjectileRequestPublisher;
 
-        void topic_callback(gary_msgs::msg::Whatever::SharedPtr msg);
-        rclcpp::Subscription<gary_msgs::msg::Whatever>::SharedPtr WhateverSubscription;
+        void topic_callback(gary_msgs::msg::InteractiveDataSend::SharedPtr msg);
+        rclcpp::Subscription<gary_msgs::msg::InteractiveDataSend>::SharedPtr InteractiveDataSendSubscription;
 
         //timer
         rclcpp::TimerBase::SharedPtr timer_update;

@@ -268,7 +268,7 @@ TYPENAME get_##VAL() const { return VAL; }     \
         uint16_t solveData(uint8_t *frame);
         uint16_t solveDataLength(uint8_t* header);
         uint8_t getCustomeDataLen() const;
-        std::vector<uint8_t> packWhateverInteractiveData(uint16_t data_cmd_id, uint16_t sender_id, uint16_t receiver_id,
+        std::vector<uint8_t> packInteractiveDataSendInteractiveDataRecv(uint16_t data_cmd_id, uint16_t sender_id, uint16_t receiver_id,
                                                          uint8_t data_length, std::vector<uint8_t>& data);
     private:
         uint8_t custom_data_len;
@@ -298,7 +298,7 @@ TYPENAME get_##VAL() const { return VAL; }     \
         autoGet(ext_client_map_command_t,mapCommand)
 
         autoGet(robot_interactive_data_t,customControllerData)
-        autoGet(robot_interactive_data_t,robotInteractiveData)
+        autoGet(robot_interactive_data_t,robotInteractiveDataRecv)
     };
 
 #ifdef autoGet
