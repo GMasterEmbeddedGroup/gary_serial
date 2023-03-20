@@ -64,7 +64,10 @@ class DR16Receiver : public rclcpp_lifecycle::LifecycleNode {
         bool is_opened;
         int available_len;
         int decode_fail_cnt;
+        bool flag_serial_offline;
+        bool flag_receiver_offline;
         bool flag_transmission_jammed;
+        bool flag_last_transmission_jammed;
         uint8_t buff[18]{};
         rclcpp::Time last_update_timestamp;
     };

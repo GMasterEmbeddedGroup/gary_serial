@@ -29,66 +29,40 @@ DR16Receiver::DR16Receiver(const rclcpp::NodeOptions &options) : rclcpp_lifecycl
     this->baudrate = 100000;
     this->fd = 0;
     this->is_opened = false;
+    this->flag_serial_offline = false;
+    this->flag_receiver_offline = false;
     this->available_len = 0;
     this->decode_fail_cnt = 0;
     this->flag_transmission_jammed = false;
-
+    this->flag_last_transmission_jammed = false;
 }
 
 CallbackReturn DR16Receiver::on_configure(const rclcpp_lifecycle::State &previous_state) {
     RCL_UNUSED(previous_state);
 
-    //check and create data publisher
-    if (this->get_parameter("send_topic").get_type() != rclcpp::PARAMETER_STRING) {
-        RCLCPP_ERROR(this->get_logger(), "send_topic type must be string");
-        return CallbackReturn::FAILURE;
-    }
+    //create data publisher
     this->send_topic = this->get_parameter("send_topic").as_string();
     this->msg_publisher = this->create_publisher<gary_msgs::msg::DR16Receiver>(
             this->send_topic, rclcpp::SystemDefaultsQoS());
 
-    //check and create diagnostic publisher
-    if (this->get_parameter("diagnostic_topic").get_type() != rclcpp::PARAMETER_STRING) {
-        RCLCPP_ERROR(this->get_logger(), "diagnostic_topic type must be string");
-        return CallbackReturn::FAILURE;
-    }
+    //create diagnostic publisher
     this->diagnostic_topic = this->get_parameter("diagnostic_topic").as_string();
     this->diag_publisher = this->create_publisher<diagnostic_msgs::msg::DiagnosticArray>(
             this->diagnostic_topic, rclcpp::SystemDefaultsQoS());
 
     //get update_freq
-    if (this->get_parameter("update_freq").get_type() != rclcpp::PARAMETER_DOUBLE) {
-        RCLCPP_ERROR(this->get_logger(), "update_freq type must be double");
-        return CallbackReturn::FAILURE;
-    }
     this->update_freq = this->get_parameter("update_freq").as_double();
 
     //get diag_freq
-    if (this->get_parameter("diag_freq").get_type() != rclcpp::PARAMETER_DOUBLE) {
-        RCLCPP_ERROR(this->get_logger(), "diag_freq type must be double");
-        return CallbackReturn::FAILURE;
-    }
     this->diag_freq = this->get_parameter("diag_freq").as_double();
 
     //get serial_port
-    if (this->get_parameter("serial_port").get_type() != rclcpp::PARAMETER_STRING) {
-        RCLCPP_ERROR(this->get_logger(), "serial_port type must be string");
-        return CallbackReturn::FAILURE;
-    }
     this->serial_port = this->get_parameter("serial_port").as_string();
 
     //get baudrate
-    if (this->get_parameter("baudrate").get_type() != rclcpp::PARAMETER_INTEGER) {
-        RCLCPP_ERROR(this->get_logger(), "baudrate type must be integer");
-        return CallbackReturn::FAILURE;
-    }
     this->baudrate = this->get_parameter("baudrate").as_int();
 
     //get override_diag_device_name
-    if (this->get_parameter("override_diag_device_name").get_type() != rclcpp::PARAMETER_STRING) {
-        RCLCPP_ERROR(this->get_logger(), "override_diag_device_name type must be string");
-        return CallbackReturn::FAILURE;
-    }
     this->override_diag_device_name = this->get_parameter("override_diag_device_name").as_string();
 
     this->dr16_msg.header.frame_id = "";
@@ -431,37 +405,51 @@ void DR16Receiver::update() {
 
 void DR16Receiver::publish_diag() {
     this->diag_msg.header.stamp = this->get_clock()->now();
-    if (!this->is_opened) {
 
+    if (!this->is_opened) {
         this->diag_msg.status[0].level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
         this->diag_msg.status[0].message = "serial device offline";
 
-        rclcpp::Clock clock;
-        RCLCPP_ERROR_THROTTLE(this->get_logger(), clock, 1000, "[%s] serial device offline",
-                              this->diag_msg.status[0].name.c_str());
+        if(!this->flag_serial_offline) RCLCPP_ERROR(this->get_logger(), "[%s] serial device offline", this->diag_msg.status[0].name.c_str());
+        this->flag_serial_offline = true;
 
-    } else if (this->get_clock()->now() - this->last_update_timestamp > 500ms) {
+        this->diag_publisher->publish(this->diag_msg);
+        return;
+    } else {
+        if(this->flag_serial_offline) RCLCPP_ERROR(this->get_logger(), "[%s] serial device online", this->diag_msg.status[0].name.c_str());
+        this->flag_serial_offline = false;
+    }
 
+    if (this->get_clock()->now() - this->last_update_timestamp > 500ms) {
         this->diag_msg.status[0].level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
         this->diag_msg.status[0].message = "receiver offline";
 
-        rclcpp::Clock clock;
-        RCLCPP_ERROR_THROTTLE(this->get_logger(), clock, 1000, "[%s] receiver offline",
-                              this->diag_msg.status[0].name.c_str());
+        if(!this->flag_receiver_offline) RCLCPP_ERROR(this->get_logger(), "[%s] receiver offline", this->diag_msg.status[0].name.c_str());
+        this->flag_receiver_offline = true;
 
-    } else if (this->flag_transmission_jammed) {
+        this->diag_publisher->publish(this->diag_msg);
+        return;
+    } else {
+        if(this->flag_receiver_offline) RCLCPP_ERROR(this->get_logger(), "[%s] receiver online", this->diag_msg.status[0].name.c_str());
+        this->flag_receiver_offline = false;
+    }
 
+    if (this->flag_transmission_jammed) {
         this->diag_msg.status[0].level = diagnostic_msgs::msg::DiagnosticStatus::WARN;
         this->diag_msg.status[0].message = "transmission jammed";
 
-        rclcpp::Clock clock;
-        RCLCPP_WARN_THROTTLE(this->get_logger(), clock, 1000, "[%s] transmission jammed",
-                             this->diag_msg.status[0].name.c_str());
+        if(!this->flag_last_transmission_jammed) RCLCPP_WARN(this->get_logger(), "[%s] serial transmission jammed", this->diag_msg.status[0].name.c_str());
+        this->flag_last_transmission_jammed = true;
 
+        this->diag_publisher->publish(this->diag_msg);
+        return;
     } else {
-        this->diag_msg.status[0].level = diagnostic_msgs::msg::DiagnosticStatus::OK;
-        this->diag_msg.status[0].message = "ok";
+        if(this->flag_last_transmission_jammed) RCLCPP_ERROR(this->get_logger(), "[%s] serial exited transmission jammed status", this->diag_msg.status[0].name.c_str());
+        this->flag_last_transmission_jammed = false;
     }
+
+    this->diag_msg.status[0].level = diagnostic_msgs::msg::DiagnosticStatus::OK;
+    this->diag_msg.status[0].message = "ok";
     this->diag_publisher->publish(this->diag_msg);
 }
 
