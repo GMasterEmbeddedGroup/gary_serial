@@ -323,9 +323,9 @@ bool DR16Receiver::decode() {
     s1 = ((this->buff[5] >> 4) & 0x000C) >> 2;
     s2 = ((this->buff[5] >> 4) & 0x0003);
     //mouse
-    x = ((int16_t) this->buff[6]) | ((int16_t) this->buff[7] << 8);
-    y = ((int16_t) this->buff[8]) | ((int16_t) this->buff[9] << 8);
-    z = ((int16_t) this->buff[10]) | ((int16_t) this->buff[11] << 8);
+    x = (int16_t) (this->buff[6] | this->buff[7] << 8);
+    y = (int16_t) (this->buff[8] | this->buff[9] << 8);
+    z = (int16_t) (this->buff[10] | this->buff[11] << 8);
     l = this->buff[12];
     r = this->buff[13];
     //keyboard
