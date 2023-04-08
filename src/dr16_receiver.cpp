@@ -23,6 +23,7 @@ DR16Receiver::DR16Receiver(const rclcpp::NodeOptions &options) : rclcpp_lifecycl
     this->declare_parameter("serial_port", "/dev/ttyDBUS0");
     this->declare_parameter("baudrate", 100000);
     this->declare_parameter("override_diag_device_name", "");
+    this->declare_parameter("deadzone", 0.05);
 
     this->update_freq = 100.0f;
     this->diag_freq = 10.0f;
@@ -35,6 +36,7 @@ DR16Receiver::DR16Receiver(const rclcpp::NodeOptions &options) : rclcpp_lifecycl
     this->decode_fail_cnt = 0;
     this->flag_transmission_jammed = false;
     this->flag_last_transmission_jammed = false;
+    this->deadzone = 0.05;
 }
 
 CallbackReturn DR16Receiver::on_configure(const rclcpp_lifecycle::State &previous_state) {
@@ -64,6 +66,9 @@ CallbackReturn DR16Receiver::on_configure(const rclcpp_lifecycle::State &previou
 
     //get override_diag_device_name
     this->override_diag_device_name = this->get_parameter("override_diag_device_name").as_string();
+
+    //get deadzone
+    this->deadzone = this->get_parameter("deadzone").as_double();
 
     this->dr16_msg.header.frame_id = "";
     this->diag_msg.header.frame_id = "";
@@ -342,10 +347,19 @@ bool DR16Receiver::decode() {
         return false;
     }
 
-    this->dr16_msg.ch_right_x = static_cast<float>(ch0) / 660;
-    this->dr16_msg.ch_right_y = static_cast<float>(ch1) / 660;
-    this->dr16_msg.ch_left_x = static_cast<float>(ch2) / 660;
-    this->dr16_msg.ch_left_y = static_cast<float>(ch3) / 660;
+    float ch0_normalized = static_cast<float>(ch0) / 660;
+    if (abs(ch0_normalized) < this->deadzone) ch0_normalized = 0.0f;
+    float ch1_normalized = static_cast<float>(ch1) / 660;
+    if (abs(ch1_normalized) < this->deadzone) ch1_normalized = 0.0f;
+    float ch2_normalized = static_cast<float>(ch2) / 660;
+    if (abs(ch2_normalized) < this->deadzone) ch2_normalized = 0.0f;
+    float ch3_normalized = static_cast<float>(ch3) / 660;
+    if (abs(ch3_normalized) < this->deadzone) ch3_normalized = 0.0f;
+
+    this->dr16_msg.ch_right_x = ch0_normalized;
+    this->dr16_msg.ch_right_y = ch1_normalized;
+    this->dr16_msg.ch_left_x = ch2_normalized;
+    this->dr16_msg.ch_left_y = ch3_normalized;
     this->dr16_msg.sw_left = s1;
     this->dr16_msg.sw_right = s2;
     this->dr16_msg.mouse_x = static_cast<float>(x);

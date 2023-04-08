@@ -46,6 +46,7 @@ class DR16Receiver : public rclcpp_lifecycle::LifecycleNode {
         std::string serial_port;
         int64_t baudrate;
         std::string override_diag_device_name;
+        double deadzone;
 
         //publisher
         rclcpp_lifecycle::LifecyclePublisher<gary_msgs::msg::DR16Receiver>::SharedPtr msg_publisher;
