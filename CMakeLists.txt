@@ -31,15 +31,14 @@ find_package(diagnostic_msgs REQUIRED)
 add_executable(dr16_receiver
         src/dr16_receiver.cpp)
 
-add_executable(rm_referee_system
+add_executable(rm_referee
         src/utils/crc8_crc16.cpp
-        src/utils/rm_referee.cpp
-        src/rm_referee_system.cpp)
+        src/rm_referee.cpp)
 
-target_link_libraries(rm_referee_system serial)
+target_link_libraries(rm_referee serial)
 
 target_include_directories(dr16_receiver PRIVATE include)
-target_include_directories(rm_referee_system PRIVATE include)
+target_include_directories(rm_referee PRIVATE include)
 
 ament_target_dependencies(
         dr16_receiver
@@ -51,7 +50,7 @@ ament_target_dependencies(
         diagnostic_msgs
 )
 ament_target_dependencies(
-        rm_referee_system
+        rm_referee
         rclcpp
         rclcpp_components
         rclcpp_lifecycle
@@ -63,13 +62,12 @@ ament_target_dependencies(
 add_library(dr16_receiver_lib SHARED
         src/dr16_receiver.cpp)
 
-add_library(rm_referee_system_lib SHARED
+add_library(rm_referee_lib SHARED
         src/utils/crc8_crc16.cpp
-        src/utils/rm_referee.cpp
-        src/rm_referee_system.cpp)
+        src/rm_referee.cpp)
 
 target_include_directories(dr16_receiver_lib PRIVATE include)
-target_include_directories(rm_referee_system_lib PRIVATE include)
+target_include_directories(rm_referee_lib PRIVATE include)
 
 ament_target_dependencies(
         dr16_receiver_lib
@@ -81,7 +79,7 @@ ament_target_dependencies(
         diagnostic_msgs
 )
 ament_target_dependencies(
-        rm_referee_system_lib
+        rm_referee_lib
         rclcpp
         rclcpp_components
         rclcpp_lifecycle
@@ -91,7 +89,7 @@ ament_target_dependencies(
 )
 
 rclcpp_components_register_nodes(dr16_receiver_lib "gary_serial::DR16Receiver")
-rclcpp_components_register_nodes(rm_referee_system_lib "gary_serial::RMRefereeSystem")
+rclcpp_components_register_nodes(rm_referee_lib "gary_serial::RMReferee")
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -104,18 +102,11 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-install(TARGETS dr16_receiver
-        DESTINATION lib/${PROJECT_NAME}
-        )
-install(TARGETS rm_referee_system
+install(TARGETS dr16_receiver rm_referee
         DESTINATION lib/${PROJECT_NAME}
         )
 
-install(TARGETS dr16_receiver_lib
-        ARCHIVE DESTINATION lib
-        LIBRARY DESTINATION lib
-        RUNTIME DESTINATION bin)
-install(TARGETS rm_referee_system_lib
+install(TARGETS dr16_receiver_lib rm_referee_lib
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib
         RUNTIME DESTINATION bin)
