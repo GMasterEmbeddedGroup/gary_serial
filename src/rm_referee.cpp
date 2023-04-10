@@ -5,6 +5,8 @@
 #include "utils/protocols/power_heat_handler.hpp"
 #include "utils/protocols/robot_position_handler.hpp"
 #include "utils/protocols/robot_hurt_handler.hpp"
+#include "utils/protocols/game_status_handler.hpp"
+#include "utils/protocols/bullet_remaining_handler.hpp"
 
 using namespace std::chrono_literals;
 using namespace gary_serial;
@@ -36,10 +38,12 @@ CallbackReturn RMReferee::on_configure(const rclcpp_lifecycle::State &previous_s
                                                            LibSerial::StopBits::STOP_BITS_1
                                                            );
 
+    this->msg_handlers.emplace(0x001, std::make_shared<GameStatusHandler>(this));
     this->msg_handlers.emplace(0x201, std::make_shared<RobotStatusHandler>(this));
     this->msg_handlers.emplace(0x202, std::make_shared<PowerHeatHandler>(this));
     this->msg_handlers.emplace(0x203, std::make_shared<RobotPositionHandler>(this));
     this->msg_handlers.emplace(0x206, std::make_shared<RobotHurtHandler>(this));
+    this->msg_handlers.emplace(0x208, std::make_shared<BulletRemainingHandler>(this));
 
     RCLCPP_INFO(this->get_logger(), "configured");
 
