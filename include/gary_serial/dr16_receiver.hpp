@@ -32,10 +32,12 @@ class DR16Receiver : public rclcpp_lifecycle::LifecycleNode {
         bool decode();
         void publish_data();
 
+        //callback group
+        rclcpp::CallbackGroup::SharedPtr cb_group;
+
+        //callback
         void update();
-
         void publish_diag();
-
         void detect_jammed();
 
         //params

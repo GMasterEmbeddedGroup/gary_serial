@@ -24,6 +24,11 @@ RMReferee::RMReferee(const rclcpp::NodeOptions &options) : rclcpp_lifecycle::Lif
 CallbackReturn RMReferee::on_configure(const rclcpp_lifecycle::State &previous_state) {
     RCL_UNUSED(previous_state);
 
+    //create callback group
+    this->cb_group = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+    rclcpp::SubscriptionOptions sub_options;
+    sub_options.callback_group = cb_group;
+
     //get update_freq
     this->update_freq = this->get_parameter("update_freq").as_double();
 
@@ -64,7 +69,7 @@ CallbackReturn RMReferee::on_activate(const rclcpp_lifecycle::State &previous_st
     RCL_UNUSED(previous_state);
 
     //create timer
-    this->timer_update = this->create_wall_timer(1000ms / this->update_freq, [this] { update(); });
+    this->timer_update = this->create_wall_timer(1000ms / this->update_freq, [this] { update(); }, this->cb_group);
 
     this->stage = STAGE_LOOKING_SOF;
     this->remaining_byte = 1;

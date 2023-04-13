@@ -42,6 +42,11 @@ DR16Receiver::DR16Receiver(const rclcpp::NodeOptions &options) : rclcpp_lifecycl
 CallbackReturn DR16Receiver::on_configure(const rclcpp_lifecycle::State &previous_state) {
     RCL_UNUSED(previous_state);
 
+    //create callback group
+    this->cb_group = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+    rclcpp::SubscriptionOptions sub_options;
+    sub_options.callback_group = cb_group;
+
     //create data publisher
     this->send_topic = this->get_parameter("send_topic").as_string();
     this->msg_publisher = this->create_publisher<gary_msgs::msg::DR16Receiver>(
@@ -110,9 +115,9 @@ CallbackReturn DR16Receiver::on_activate(const rclcpp_lifecycle::State &previous
     RCL_UNUSED(previous_state);
 
     //create timer
-    this->timer_update = this->create_wall_timer(1000ms / this->update_freq, [this] { update(); });
-    this->timer_diag = this->create_wall_timer(1000ms / this->diag_freq, [this] { publish_diag(); });
-    this->timer_detect = this->create_wall_timer(1000ms, [this] { detect_jammed(); });
+    this->timer_update = this->create_wall_timer(1000ms / this->update_freq, [this] { update(); }, this->cb_group);
+    this->timer_diag = this->create_wall_timer(1000ms / this->diag_freq, [this] { publish_diag(); }, this->cb_group);
+    this->timer_detect = this->create_wall_timer(1000ms, [this] { detect_jammed(); }, this->cb_group);
     //activate publisher
     this->msg_publisher->on_activate();
     this->diag_publisher->on_activate();

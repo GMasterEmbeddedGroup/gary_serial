@@ -66,6 +66,8 @@ add_library(rm_referee_lib SHARED
         src/utils/crc8_crc16.cpp
         src/rm_referee.cpp)
 
+target_link_libraries(rm_referee_lib serial)
+
 target_include_directories(dr16_receiver_lib PRIVATE include)
 target_include_directories(rm_referee_lib PRIVATE include)
 

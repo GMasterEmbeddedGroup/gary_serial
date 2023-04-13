@@ -29,6 +29,10 @@ namespace gary_serial {
         CallbackReturn on_shutdown(const rclcpp_lifecycle::State & previous_state) override;
         CallbackReturn on_error(const rclcpp_lifecycle::State & previous_state) override;
 
+        //callback group
+        rclcpp::CallbackGroup::SharedPtr cb_group;
+
+        //callback
         void update();
 
         //params
