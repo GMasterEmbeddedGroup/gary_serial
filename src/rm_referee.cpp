@@ -114,81 +114,87 @@ CallbackReturn RMReferee::on_error(const rclcpp_lifecycle::State &previous_state
 void RMReferee::update() {
     RCLCPP_DEBUG(this->get_logger(), "update");
 
-    if (! this->serial->IsOpen()) {
-        this->serial->Open(this->serial_port);
-        RCLCPP_DEBUG(this->get_logger(), "serial not open, trying to open");
-        return;
-    }
-    RCLCPP_DEBUG(this->get_logger(), "now available %d bytes, %d bytes in need", this->serial->GetNumberOfBytesAvailable(),
-                 this->remaining_byte);
+    try {
 
-    while (this->serial->GetNumberOfBytesAvailable() >= this->remaining_byte) {
-        RCLCPP_DEBUG(this->get_logger(), "stage %d", this->stage);
-        switch (this->stage) {
-
-            case STAGE_LOOKING_SOF:
-            {
-                char ch;
-                this->serial->ReadByte(ch);
-                if ((uint8_t)ch == 0xa5) {
-                    this->stage = STAGE_READING_HEADER;
-                    this->remaining_byte = 4;
-                    this->buffer[0] = (uint8_t)ch;
-                    RCLCPP_DEBUG(this->get_logger(), "found SOF");
-                } else {
-                    this->stage = STAGE_LOOKING_SOF;
-                    this->remaining_byte = 1;
-                    RCLCPP_DEBUG(this->get_logger(), "SOF mismatch, found 0x%x", ch);
-                }
-                break;
-            }
-
-            case STAGE_READING_HEADER:
-                for (int i = 1; i < 5; ++i) {
-                    char ch;
-                    this->serial->ReadByte(ch);
-                    this->buffer[i] = (uint8_t)ch;
-                }
-                if(verify_CRC8_check_sum(this->buffer, 5) == 1) {
-                    this->stage = STAGE_READING_PACKET;
-                    this->data_length = this->buffer[2] << 8 | this->buffer[1];
-                    this->remaining_byte = 2 + this->data_length + 2;
-                    RCLCPP_DEBUG(this->get_logger(), "found header, packet length %d", this->data_length);
-                    break;
-                } else {
-                    this->stage = STAGE_LOOKING_SOF;
-                    this->remaining_byte = 1;
-                    RCLCPP_WARN(this->get_logger(), "found header, but crc8 checksum mismatch");
-                }
-                break;
-            case STAGE_READING_PACKET:
-                for (int i = 5; i < 5 + 2 + this->data_length + 2; ++i) {
-                    char ch;
-                    this->serial->ReadByte(ch);
-                    this->buffer[i] = (uint8_t)ch;
-                }
-                if(verify_CRC16_check_sum(this->buffer, 5 + 2 + this->data_length + 2) == 1) {
-
-                    this->cmd_id = this->buffer[6] << 8 | this->buffer[5];
-                    RCLCPP_DEBUG(this->get_logger(), "found packet, cmd 0x%x", this->cmd_id);
-
-                    if(this->msg_handlers.count(this->cmd_id) == 1) {
-                        this->msg_handlers[this->cmd_id]->decode(this->buffer + 5 + 2, this->data_length);
-                        this->msg_handlers[this->cmd_id]->publish();
-                    } else {
-                        RCLCPP_WARN(this->get_logger(), "no matching handler for 0x%x", this->cmd_id);
-                    }
-
-                    this->stage = STAGE_LOOKING_SOF;
-                    this->remaining_byte = 1;
-                    break;
-                } else {
-                    this->stage = STAGE_LOOKING_SOF;
-                    this->remaining_byte = 1;
-                    RCLCPP_WARN(this->get_logger(), "found packet 0x%x, but crc16 checksum mismatch", this->buffer[6] << 8 | this->buffer[5]);
-                }
-                break;
+        if (!this->serial->IsOpen()) {
+            this->serial->Open(this->serial_port);
+            RCLCPP_DEBUG(this->get_logger(), "serial not open, trying to open");
+            return;
         }
+        RCLCPP_DEBUG(this->get_logger(), "now available %d bytes, %d bytes in need",
+                     this->serial->GetNumberOfBytesAvailable(),
+                     this->remaining_byte);
+
+        while (this->serial->GetNumberOfBytesAvailable() >= this->remaining_byte) {
+            RCLCPP_DEBUG(this->get_logger(), "stage %d", this->stage);
+            switch (this->stage) {
+
+                case STAGE_LOOKING_SOF: {
+                    char ch;
+                    this->serial->ReadByte(ch);
+                    if ((uint8_t) ch == 0xa5) {
+                        this->stage = STAGE_READING_HEADER;
+                        this->remaining_byte = 4;
+                        this->buffer[0] = (uint8_t) ch;
+                        RCLCPP_DEBUG(this->get_logger(), "found SOF");
+                    } else {
+                        this->stage = STAGE_LOOKING_SOF;
+                        this->remaining_byte = 1;
+                        RCLCPP_DEBUG(this->get_logger(), "SOF mismatch, found 0x%x", ch);
+                    }
+                    break;
+                }
+
+                case STAGE_READING_HEADER:
+                    for (int i = 1; i < 5; ++i) {
+                        char ch;
+                        this->serial->ReadByte(ch);
+                        this->buffer[i] = (uint8_t) ch;
+                    }
+                    if (verify_CRC8_check_sum(this->buffer, 5) == 1) {
+                        this->stage = STAGE_READING_PACKET;
+                        this->data_length = this->buffer[2] << 8 | this->buffer[1];
+                        this->remaining_byte = 2 + this->data_length + 2;
+                        RCLCPP_DEBUG(this->get_logger(), "found header, packet length %d", this->data_length);
+                        break;
+                    } else {
+                        this->stage = STAGE_LOOKING_SOF;
+                        this->remaining_byte = 1;
+                        RCLCPP_WARN(this->get_logger(), "found header, but crc8 checksum mismatch");
+                    }
+                    break;
+                case STAGE_READING_PACKET:
+                    for (int i = 5; i < 5 + 2 + this->data_length + 2; ++i) {
+                        char ch;
+                        this->serial->ReadByte(ch);
+                        this->buffer[i] = (uint8_t) ch;
+                    }
+                    if (verify_CRC16_check_sum(this->buffer, 5 + 2 + this->data_length + 2) == 1) {
+
+                        this->cmd_id = this->buffer[6] << 8 | this->buffer[5];
+                        RCLCPP_DEBUG(this->get_logger(), "found packet, cmd 0x%x", this->cmd_id);
+
+                        if (this->msg_handlers.count(this->cmd_id) == 1) {
+                            this->msg_handlers[this->cmd_id]->decode(this->buffer + 5 + 2, this->data_length);
+                            this->msg_handlers[this->cmd_id]->publish();
+                        } else {
+                            RCLCPP_WARN(this->get_logger(), "no matching handler for 0x%x", this->cmd_id);
+                        }
+
+                        this->stage = STAGE_LOOKING_SOF;
+                        this->remaining_byte = 1;
+                        break;
+                    } else {
+                        this->stage = STAGE_LOOKING_SOF;
+                        this->remaining_byte = 1;
+                        RCLCPP_WARN(this->get_logger(), "found packet 0x%x, but crc16 checksum mismatch",
+                                    this->buffer[6] << 8 | this->buffer[5]);
+                    }
+                    break;
+            }
+        }
+    } catch (std::exception &e) {
+        RCLCPP_ERROR(this->get_logger(), "%s", e.what());
     }
 }
 
