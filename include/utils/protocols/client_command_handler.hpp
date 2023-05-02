@@ -10,7 +10,7 @@ class ClientCommandHandler : public MsgHandlerBase {
 
 public:
     explicit ClientCommandHandler(RMReferee *nodeptr) {
-        this->publisher = nodeptr->create_publisher<gary_msgs::msg::ClientCommand>("/referee/bullet_remaining",
+        this->publisher = nodeptr->create_publisher<gary_msgs::msg::ClientCommand>("/referee/client_command",
                                                                                  rclcpp::SystemDefaultsQoS());
         this->publisher->on_activate();
     }
