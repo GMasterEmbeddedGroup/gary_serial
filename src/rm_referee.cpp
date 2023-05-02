@@ -7,6 +7,7 @@
 #include "utils/protocols/robot_hurt_handler.hpp"
 #include "utils/protocols/game_status_handler.hpp"
 #include "utils/protocols/bullet_remaining_handler.hpp"
+#include "utils/protocols/client_command_handler.hpp"
 
 using namespace std::chrono_literals;
 using namespace gary_serial;
@@ -49,6 +50,7 @@ CallbackReturn RMReferee::on_configure(const rclcpp_lifecycle::State &previous_s
     this->msg_handlers.emplace(0x203, std::make_shared<RobotPositionHandler>(this));
     this->msg_handlers.emplace(0x206, std::make_shared<RobotHurtHandler>(this));
     this->msg_handlers.emplace(0x208, std::make_shared<BulletRemainingHandler>(this));
+    this->msg_handlers.emplace(0x303, std::make_shared<ClientCommandHandler>(this));
 
     RCLCPP_INFO(this->get_logger(), "configured");
 
@@ -194,7 +196,7 @@ void RMReferee::update() {
             }
         }
     } catch (std::exception &e) {
-        RCLCPP_ERROR(this->get_logger(), "%s", e.what());
+        RCLCPP_ERROR(this->get_logger(), "Caught Error: %s", e.what());
     }
 }
 
