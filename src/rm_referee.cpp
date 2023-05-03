@@ -8,6 +8,7 @@
 #include "utils/protocols/game_status_handler.hpp"
 #include "utils/protocols/bullet_remaining_handler.hpp"
 #include "utils/protocols/client_command_handler.hpp"
+#include "utils/protocols/shoot_data_handler.hpp"
 
 using namespace std::chrono_literals;
 using namespace gary_serial;
@@ -49,6 +50,7 @@ CallbackReturn RMReferee::on_configure(const rclcpp_lifecycle::State &previous_s
     this->msg_handlers.emplace(0x202, std::make_shared<PowerHeatHandler>(this));
     this->msg_handlers.emplace(0x203, std::make_shared<RobotPositionHandler>(this));
     this->msg_handlers.emplace(0x206, std::make_shared<RobotHurtHandler>(this));
+    this->msg_handlers.emplace(0x207, std::make_shared<ShootDataHandler>(this));
     this->msg_handlers.emplace(0x208, std::make_shared<BulletRemainingHandler>(this));
     this->msg_handlers.emplace(0x303, std::make_shared<ClientCommandHandler>(this));
 
