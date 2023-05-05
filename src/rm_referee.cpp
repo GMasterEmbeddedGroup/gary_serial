@@ -58,6 +58,11 @@ CallbackReturn RMReferee::on_configure(const rclcpp_lifecycle::State &previous_s
     this->msg_handlers.emplace(0x002, std::make_shared<GameResultHandler>(this));
     this->msg_handlers.emplace(0x204, std::make_shared<RobotBuffHandler>(this));
 
+    this->interactive_data_sub = this->create_subscription<gary_msgs::msg::InteractiveDataSend>("/referee/interactive_data_send",
+                                                                                                rclcpp::SystemDefaultsQoS(),
+                                                                                                std::bind(&RMReferee::interactive_data_callback, this, std::placeholders::_1),
+                                                                                                sub_options);
+
     RCLCPP_INFO(this->get_logger(), "configured");
 
     return CallbackReturn::SUCCESS;
@@ -119,6 +124,11 @@ CallbackReturn RMReferee::on_error(const rclcpp_lifecycle::State &previous_state
 }
 
 
+void RMReferee::interactive_data_callback(gary_msgs::msg::InteractiveDataSend::SharedPtr msg) {
+    this->interactive_data_buffer.emplace_back(*msg);
+    RCLCPP_DEBUG(this->get_logger(), "interactive data recv callback");
+}
+
 void RMReferee::update() {
     RCLCPP_DEBUG(this->get_logger(), "update");
 
@@ -129,6 +139,8 @@ void RMReferee::update() {
             RCLCPP_DEBUG(this->get_logger(), "serial not open, trying to open");
             return;
         }
+
+        //RX
         RCLCPP_DEBUG(this->get_logger(), "now available %d bytes, %d bytes in need",
                      this->serial->GetNumberOfBytesAvailable(),
                      this->remaining_byte);
@@ -143,7 +155,7 @@ void RMReferee::update() {
                     if ((uint8_t) ch == 0xa5) {
                         this->stage = STAGE_READING_HEADER;
                         this->remaining_byte = 4;
-                        this->buffer[0] = (uint8_t) ch;
+                        this->rx_buffer[0] = (uint8_t) ch;
                         RCLCPP_DEBUG(this->get_logger(), "found SOF");
                     } else {
                         this->stage = STAGE_LOOKING_SOF;
@@ -157,11 +169,11 @@ void RMReferee::update() {
                     for (int i = 1; i < 5; ++i) {
                         char ch;
                         this->serial->ReadByte(ch);
-                        this->buffer[i] = (uint8_t) ch;
+                        this->rx_buffer[i] = (uint8_t) ch;
                     }
-                    if (verify_CRC8_check_sum(this->buffer, 5) == 1) {
+                    if (verify_CRC8_check_sum(this->rx_buffer, 5) == 1) {
                         this->stage = STAGE_READING_PACKET;
-                        this->data_length = this->buffer[2] << 8 | this->buffer[1];
+                        this->data_length = this->rx_buffer[2] << 8 | this->rx_buffer[1];
                         this->remaining_byte = 2 + this->data_length + 2;
                         RCLCPP_DEBUG(this->get_logger(), "found header, packet length %d", this->data_length);
                         break;
@@ -175,15 +187,15 @@ void RMReferee::update() {
                     for (int i = 5; i < 5 + 2 + this->data_length + 2; ++i) {
                         char ch;
                         this->serial->ReadByte(ch);
-                        this->buffer[i] = (uint8_t) ch;
+                        this->rx_buffer[i] = (uint8_t) ch;
                     }
-                    if (verify_CRC16_check_sum(this->buffer, 5 + 2 + this->data_length + 2) == 1) {
+                    if (verify_CRC16_check_sum(this->rx_buffer, 5 + 2 + this->data_length + 2) == 1) {
 
-                        this->cmd_id = this->buffer[6] << 8 | this->buffer[5];
+                        this->cmd_id = this->rx_buffer[6] << 8 | this->rx_buffer[5];
                         RCLCPP_DEBUG(this->get_logger(), "found packet, cmd 0x%x", this->cmd_id);
 
                         if (this->msg_handlers.count(this->cmd_id) == 1) {
-                            this->msg_handlers[this->cmd_id]->decode(this->buffer + 5 + 2, this->data_length);
+                            this->msg_handlers[this->cmd_id]->decode(this->rx_buffer + 5 + 2, this->data_length);
                             this->msg_handlers[this->cmd_id]->publish();
                         } else {
                             RCLCPP_WARN(this->get_logger(), "no matching handler for 0x%x", this->cmd_id);
@@ -196,11 +208,75 @@ void RMReferee::update() {
                         this->stage = STAGE_LOOKING_SOF;
                         this->remaining_byte = 1;
                         RCLCPP_WARN(this->get_logger(), "found packet 0x%x, but crc16 checksum mismatch",
-                                    this->buffer[6] << 8 | this->buffer[5]);
+                                    this->rx_buffer[6] << 8 | this->rx_buffer[5]);
                     }
                     break;
             }
         }
+
+        //TX
+        if (this->interactive_data_buffer.empty()) return;
+
+        for (auto i = this->interactive_data_buffer.begin(); i < this->interactive_data_buffer.end(); ++i) {
+            rclcpp::Time msg_time(i->header.stamp.sec, i->header.stamp.nanosec, RCL_ROS_TIME);
+            rclcpp::Time time_now = this->get_clock()->now();
+            if ((time_now - msg_time).seconds() > i->valid_time) {
+                this->interactive_data_buffer.erase(i);
+                RCLCPP_WARN(this->get_logger(), "interactive data invalid after %f seconds", (time_now - msg_time).seconds());
+            }
+        }
+
+        if (this->interactive_data_buffer.empty()) return;
+
+        auto interactive_itr = this->interactive_data_buffer.begin();
+        for (auto i = this->interactive_data_buffer.begin(); i < this->interactive_data_buffer.end(); ++i) {
+            if (i->priority < interactive_itr->priority) interactive_itr = i;
+        }
+
+        gary_msgs::msg::InteractiveDataSend data_send = *interactive_itr;
+        this->interactive_data_buffer.erase(interactive_itr);
+
+        //SOF
+        this->tx_buffer[0] = 0xa5;
+        //DATA_LENGTH_LOW
+        this->tx_buffer[1] = 6 + data_send.data.size();
+        //DATA_LENGTH_HIGH
+        this->tx_buffer[2] = 0x00;
+        //SEQ
+        this->tx_buffer[3]++;
+        //CRC8
+        append_CRC8_check_sum(this->tx_buffer, 5);
+
+        //CMD_ID_LOW
+        this->tx_buffer[5] = 0x0301 & 0xff;
+        //CMD_ID_HIGH
+        this->tx_buffer[6] = 0x0301 >> 8;
+        //DATA_CMD_ID_LOW
+        this->tx_buffer[7] = data_send.data_cmd_id & 0xff;
+        //DATA_CMD_ID_HIGH
+        this->tx_buffer[8] = data_send.data_cmd_id >> 8;
+        //SENDER_ID_LOW
+        this->tx_buffer[9] = data_send.sender_id & 0xff;
+        //SENDER_ID_HIGH
+        this->tx_buffer[10] = data_send.sender_id >> 8;
+        //RECEIVER_ID_LOW
+        this->tx_buffer[11] = data_send.receiver_id & 0xff;
+        //RECEIVER_ID_HIGH
+        this->tx_buffer[12] = data_send.receiver_id >> 8;
+
+        //DATA
+        for (unsigned long i = 0; i < data_send.data.size(); ++i) {
+            this->tx_buffer[13 + i] = data_send.data[i];
+        }
+
+        //CRC16
+        append_CRC16_check_sum(this->tx_buffer, 5 + 2 + 6 + data_send.data.size() + 2);
+
+        //SEND DATA
+        for (unsigned long i = 0; i < 5 + 2 + 6 + data_send.data.size() + 2; ++i) {
+            this->serial->WriteByte(this->tx_buffer[i]);
+        }
+
     } catch (std::exception &e) {
         RCLCPP_ERROR(this->get_logger(), "Caught Error: %s", e.what());
     }

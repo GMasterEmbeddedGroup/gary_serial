@@ -1,6 +1,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include "utils/protocols/msg_handler_base.hpp"
+#include "gary_msgs/msg/interactive_data_send.hpp"
 
 #include <libserial/SerialPort.h>
 
@@ -34,10 +35,14 @@ namespace gary_serial {
 
         //callback
         void update();
+        void interactive_data_callback(gary_msgs::msg::InteractiveDataSend::SharedPtr msg);
 
         //params
         double update_freq;
         std::string serial_port;
+
+        //subscribers
+        rclcpp::Subscription<gary_msgs::msg::InteractiveDataSend>::SharedPtr interactive_data_sub;
 
         //timers
         rclcpp::TimerBase::SharedPtr timer_update;
@@ -49,12 +54,14 @@ namespace gary_serial {
 
         //buffer
         uint16_t remaining_byte{};
-        uint8_t buffer[255]{};
+        uint8_t rx_buffer[255]{};
+        uint8_t tx_buffer[255]{};
 
         uint16_t data_length{};
         uint16_t cmd_id{};
 
         std::map<uint16_t, std::shared_ptr<MsgHandlerBase>> msg_handlers;
+        std::vector<gary_msgs::msg::InteractiveDataSend> interactive_data_buffer;
 
     };
 }
