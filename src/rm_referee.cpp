@@ -11,6 +11,7 @@
 #include "utils/protocols/shoot_data_handler.hpp"
 #include "utils/protocols/game_result_handler.hpp"
 #include "utils/protocols/robot_buff_handler.hpp"
+#include "utils/protocols/interactive_data_handler.hpp"
 
 using namespace std::chrono_literals;
 using namespace gary_serial;
@@ -57,6 +58,7 @@ CallbackReturn RMReferee::on_configure(const rclcpp_lifecycle::State &previous_s
     this->msg_handlers.emplace(0x303, std::make_shared<ClientCommandHandler>(this));
     this->msg_handlers.emplace(0x002, std::make_shared<GameResultHandler>(this));
     this->msg_handlers.emplace(0x204, std::make_shared<RobotBuffHandler>(this));
+    this->msg_handlers.emplace(0x301, std::make_shared<InteractiveDataHandler>(this));
 
     this->interactive_data_sub = this->create_subscription<gary_msgs::msg::InteractiveDataSend>("/referee/interactive_data_send",
                                                                                                 rclcpp::SystemDefaultsQoS(),
