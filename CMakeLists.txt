@@ -31,10 +31,26 @@ find_package(diagnostic_msgs REQUIRED)
 add_executable(dr16_receiver
         src/dr16_receiver.cpp)
 
+add_executable(rm_referee
+        src/utils/crc8_crc16.cpp
+        src/rm_referee.cpp)
+
+target_link_libraries(rm_referee serial)
+
 target_include_directories(dr16_receiver PRIVATE include)
+target_include_directories(rm_referee PRIVATE include)
 
 ament_target_dependencies(
         dr16_receiver
+        rclcpp
+        rclcpp_components
+        rclcpp_lifecycle
+        lifecycle_msgs
+        gary_msgs
+        diagnostic_msgs
+)
+ament_target_dependencies(
+        rm_referee
         rclcpp
         rclcpp_components
         rclcpp_lifecycle
@@ -46,7 +62,14 @@ ament_target_dependencies(
 add_library(dr16_receiver_lib SHARED
         src/dr16_receiver.cpp)
 
+add_library(rm_referee_lib SHARED
+        src/utils/crc8_crc16.cpp
+        src/rm_referee.cpp)
+
+target_link_libraries(rm_referee_lib serial)
+
 target_include_directories(dr16_receiver_lib PRIVATE include)
+target_include_directories(rm_referee_lib PRIVATE include)
 
 ament_target_dependencies(
         dr16_receiver_lib
@@ -57,9 +80,18 @@ ament_target_dependencies(
         gary_msgs
         diagnostic_msgs
 )
+ament_target_dependencies(
+        rm_referee_lib
+        rclcpp
+        rclcpp_components
+        rclcpp_lifecycle
+        lifecycle_msgs
+        gary_msgs
+        diagnostic_msgs
+)
 
 rclcpp_components_register_nodes(dr16_receiver_lib "gary_serial::DR16Receiver")
-
+rclcpp_components_register_nodes(rm_referee_lib "gary_serial::RMReferee")
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -72,11 +104,11 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-install(TARGETS dr16_receiver
+install(TARGETS dr16_receiver rm_referee
         DESTINATION lib/${PROJECT_NAME}
         )
 
-install(TARGETS dr16_receiver_lib
+install(TARGETS dr16_receiver_lib rm_referee_lib
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib
         RUNTIME DESTINATION bin)

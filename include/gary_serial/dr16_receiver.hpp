@@ -32,10 +32,12 @@ class DR16Receiver : public rclcpp_lifecycle::LifecycleNode {
         bool decode();
         void publish_data();
 
+        //callback group
+        rclcpp::CallbackGroup::SharedPtr cb_group;
+
+        //callback
         void update();
-
         void publish_diag();
-
         void detect_jammed();
 
         //params
@@ -46,6 +48,7 @@ class DR16Receiver : public rclcpp_lifecycle::LifecycleNode {
         std::string serial_port;
         int64_t baudrate;
         std::string override_diag_device_name;
+        double deadzone;
 
         //publisher
         rclcpp_lifecycle::LifecyclePublisher<gary_msgs::msg::DR16Receiver>::SharedPtr msg_publisher;
@@ -64,7 +67,10 @@ class DR16Receiver : public rclcpp_lifecycle::LifecycleNode {
         bool is_opened;
         int available_len;
         int decode_fail_cnt;
+        bool flag_serial_offline;
+        bool flag_receiver_offline;
         bool flag_transmission_jammed;
+        bool flag_last_transmission_jammed;
         uint8_t buff[18]{};
         rclcpp::Time last_update_timestamp;
     };
